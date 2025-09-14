@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Token Risk Report</title>
+    <style>
+      body { 
+        font-family: 'Segoe UI', Arial, sans-serif; 
+        font-size: 14px; 
+        color: #111; 
+        background-color: #f8f9fa; 
+        margin: 0;
+        padding: 20px;
+      }
+      h1, h2, h3 { margin: 6px 0; }
+      h1 { font-size: 26px; color: #222; }
+      .row { display: flex; gap: 16px; flex-wrap: wrap; }
+      .box { 
+        background: white; 
+        border-radius: 8px; 
+        padding: 14px; 
+        margin-bottom: 16px; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05); 
+        flex: 1;
+      }
+      .kpi { flex: 1; text-align: center; }
+      .muted { color: #666; font-size: 13px; }
+      .badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: white;
+        font-weight: bold;
+      }
+      .badge-high { background: #d9534f; }
+      .badge-medium { background: #f0ad4e; }
+      .badge-low { background: #5bc0de; }
+      .score {
+        font-size: 32px; 
+        font-weight: bold; 
+        margin-bottom: 4px;
+        color: #28a745;
+      }
+      .risk {
+        border-left: 5px solid;
+        padding-left: 10px;
+        margin-bottom: 12px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+      }
+      .risk-high { border-color: #d9534f; background: #fbeaea; }
+      .risk-medium { border-color: #f0ad4e; background: #fff6e6; }
+      .risk-low { border-color: #5bc0de; background: #eaf7fb; }
+      .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 4px;
+      }
+    </style>
+</head>
+<body>
+  <h1>Token Risk Report</h1>
+
+  <!-- Token Details -->
+  <div class="box">
+    <div class="section-title">Token Details</div>
+    <div><strong>Address:</strong> {{ address }}</div>
+    <div><strong>Name:</strong> {{ token_name|default:'Unknown' }} ({{ token_symbol|default:'?' }})</div>
+    <div><strong>Verified:</strong> {{ verified }}</div>
+    <div><strong>Total Supply:</strong> {{ total_supply|default:'-' }} (decimals {{ decimals|default:'-' }})</div>
+    <div><strong>Holders:</strong> {{ holders_count|default:'-' }}</div>
+    <div><strong>Creator:</strong> {{ creator|default:'Unknown' }}</div>
+    <div><strong>Creation:</strong> {{ creation_time|default:'-' }}</div>
+  </div>
+
+  <!-- KPI Section -->
+  <div class="row">
+    <div class="box kpi">
+      <h3>Security Score</h3>
+      <div class="score">{{ security_score|default:0 }}</div>
+      <div class="muted">Recommendation: {{ recommendation }}</div>
+    </div>
+    <div class="box kpi">
+      <h3>ABI Vulnerability</h3>
+      {% if abi_vulnerability %}
+        <span class="badge badge-high">Detected</span>
+        <div class="muted">{{ abi_vulnerability_detail }}</div>
+      {% else %}
+        <span class="badge badge-low">Not Detected</span>
+        <div class="muted">No ABI vulnerabilities found.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Risks Section -->
+  <div class="box">
+    <div class="section-title">Detected Risks</div>
+    {% if risks %}
+      {% for r in risks %}
+        <div class="risk risk-{{ r.severity|lower }}">
+          <strong>{{ r.title }}</strong> 
+          <span class="badge badge-{{ r.severity|lower }}">{{ r.severity }}</span>
+          <div class="muted">{{ r.detail }}</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="muted">No high risks detected.</div>
+    {% endif %}
+  </div>
+
+</body>
+</html>

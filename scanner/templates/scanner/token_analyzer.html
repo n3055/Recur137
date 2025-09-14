@@ -1,0 +1,462 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Token Risk Analyzer</title>
+  <style>
+    :root{
+      --bg: #060b1a;
+      --bg-soft:#0b1229;
+      --card:#0e1533;
+      --card-2:#101a3f;
+      --muted:#99a8e0;
+      --text:#e8ebff;
+      --border:#1b2a55;
+      --primary:#3b82f6;
+      --primary-2:#2563eb;
+      --success:#10b981;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --info:#60a5fa;
+      --shadow:0 12px 40px rgba(0,0,0,.35);
+      --radius:16px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,.20), transparent 60%),
+        radial-gradient(1000px 500px at 110% 10%, rgba(139,92,246,.18), transparent 60%),
+        radial-gradient(900px 400px at -10% 110%, rgba(16,185,129,.12), transparent 55%),
+        var(--bg);
+    }
+
+    /* Top bar */
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      backdrop-filter:saturate(140%) blur(8px);
+      background:linear-gradient(to right, rgba(9,15,34,.8), rgba(9,15,34,.6));
+      border-bottom:1px solid rgba(27,42,85,.5);
+    }
+    .wrap{max-width:1150px;margin:0 auto;padding:16px 20px;}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+    .brand-badge{
+      width:34px;height:34px;border-radius:10px;
+      display:grid;place-items:center;
+      background:linear-gradient(135deg, var(--primary), #8b5cf6);
+      box-shadow:0 6px 20px rgba(59,130,246,.45);
+      font-weight:700;
+    }
+    .nav-actions a{
+      text-decoration:none; color:#fff; background:var(--primary);
+      padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.06);
+      display:inline-flex;align-items:center;gap:8px;font-weight:600;
+      transition:transform .15s ease, background .2s ease;
+    }
+    .nav-actions a:hover{transform:translateY(-1px);background:var(--primary-2)}
+    .nav-actions a.alt{background:transparent;border-color:var(--border);color:var(--text)}
+    .nav-actions a.alt:hover{background:rgba(255,255,255,.05)}
+
+    /* Hero / scanner panel */
+    .hero{
+      padding:36px 20px 10px;
+    }
+    .panel{
+      max-width:980px;margin:0 auto 22px;
+      border:1px solid var(--border);
+      background:
+        linear-gradient(180deg, rgba(16,24,54,.8), rgba(12,18,40,.85)),
+        linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.06));
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel-head{
+      padding:22px 22px 12px;
+      border-bottom:1px solid rgba(27,42,85,.6);
+      display:flex; align-items:center; gap:12px;
+    }
+    .chip{
+      padding:6px 10px;border-radius:999px;
+      font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+      background:rgba(147,197,253,.12); color:#cde1ff; border:1px solid rgba(96,165,250,.25);
+    }
+    .panel-body{padding:18px 22px 22px}
+    .searchbar{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+    }
+    .searchbar input[type=text]{
+      flex:1 1 360px; min-width:220px;
+      padding:14px 16px; border-radius:12px;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg,#0b122b,#0d1432);
+      color:var(--text); font-size:15px;
+      transition:border .2s ease, box-shadow .2s ease;
+    }
+    .searchbar input[type=text]::placeholder{color:#a3b2de}
+    .searchbar input[type=text]:focus{
+      outline:none; border-color:#3d7bfd;
+      box-shadow:0 0 0 3px rgba(61,123,253,.25);
+    }
+    .btn{
+      background:var(--primary); color:#fff; border:0;
+      padding:12px 16px; border-radius:12px; cursor:pointer; font-weight:700;
+      transition:transform .15s ease, background .2s ease, box-shadow .2s ease;
+      box-shadow:0 8px 24px rgba(59,130,246,.25);
+    }
+    .btn:hover{background:var(--primary-2); transform:translateY(-1px)}
+    .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
+    .btn.secondary:hover{background:rgba(255,255,255,.06)}
+
+    /* Cards & grids */
+    .cards{max-width:1150px;margin:0 auto 28px;padding:0 20px;display:grid;gap:18px;grid-template-columns:1fr}
+    .card{
+      border:1px solid var(--border); border-radius:14px;
+      background:linear-gradient(180deg, #0e1533, #0b122b);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card h3{margin:0;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .card-head{padding:16px 18px;border-bottom:1px solid rgba(27,42,85,.55);display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .card-body{padding:18px}
+    .grid{display:grid;gap:14px}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:1000px){.grid.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:700px){.grid.cols-3{grid-template-columns:1fr}.grid.cols-4{grid-template-columns:1fr}}
+
+    .kpi{
+      background:linear-gradient(180deg, #0c1430, #0b1229);
+      border:1px solid var(--border); border-radius:12px; padding:14px;
+      transition:transform .15s ease, box-shadow .2s ease;
+    }
+    .kpi:hover{transform:translateY(-2px); box-shadow:0 10px 28px rgba(0,0,0,.35)}
+    .kpi h4{margin:0 0 6px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+    .kpi .val{font-weight:700;font-size:18px;word-break:break-word}
+    .score{font-size:44px;font-weight:900;letter-spacing:.5px}
+
+    /* Risk list */
+    .risk{
+      border-left:5px solid var(--info); background:rgba(255,255,255,.03);
+      padding:12px 12px 12px 14px; border-radius:10px; margin-bottom:12px;
+    }
+    .risk.high{border-color:var(--danger)}
+    .risk.medium{border-color:var(--warn)}
+    .risk.low{border-color:var(--success)}
+    .badge{
+      display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em;
+    }
+    .badge.high{background:#3b0d0d;color:#fecaca;border:1px solid #7f1d1d}
+    .badge.medium{background:#3b2a08;color:#fde68a;border:1px solid #713f12}
+    .badge.low{background:#062a1f;color:#bbf7d0;border:1px solid #065f46}
+
+    /* Details / accordion */
+    details{background:rgba(255,255,255,.02);border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+    details + details{margin-top:10px}
+    summary{cursor:pointer;font-weight:700}
+    summary::-webkit-details-marker{display:none}
+
+    /* Table */
+    .table{width:100%; border-collapse:collapse; font-size:14px}
+    .table th,.table td{border-bottom:1px solid rgba(27,42,85,.5); padding:10px 8px; text-align:left; vertical-align:top}
+    .table th{color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase}
+
+    /* Footer */
+    .foot{max-width:1150px;margin:12px auto 40px;padding:0 20px;text-align:center;color:var(--muted);font-size:12px}
+
+    /* Flash */
+    #flash{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(96,165,250,.08)}
+  </style>
+
+  {% if messages %}
+  <script>
+    setTimeout(function(){var el=document.getElementById('flash'); if(el) el.style.display='none';}, 4000);
+  </script>
+  {% endif %}
+</head>
+<body>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="wrap">
+      <div class="row">
+        <div class="brand">
+          <div class="brand-badge">TR</div>
+          <div>Token Risk Analyzer</div>
+        </div>
+        <div class="nav-actions" style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="alt" href="/token/">Analyze Token</a>
+          <a href="/simulator">Simulator Playground</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero / Scanner -->
+  <section class="hero">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 style="margin:0;font-size:20px;font-weight:800;">Ethereum Token Risk Analyzer</h2>
+      </div>
+      <div class="panel-body">
+        <p style="margin:0 0 12px;color:var(--muted)">Enter an ERC-20 / contract address to assess risk.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="searchbar">
+            <input type="text" name="address" placeholder="0x..." value="{{ address|default:'' }}"/>
+            <button type="submit" class="btn">Analyze</button>
+            <a href="/token/" class="btn secondary">New Lookup</a>
+          </div>
+        </form>
+        {% if messages %}
+        <div id="flash" style="margin-top:12px">{% for m in messages %}{{ m }}{% endfor %}</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% if address %}
+  <!-- KPI Overview -->
+  <section class="cards">
+    <div class="card">
+      <div class="card-head"><h3>Overview</h3></div>
+      <div class="card-body">
+        <div class="grid cols-4">
+          <div class="kpi">
+            <h4>Security Score</h4>
+            <div class="score">{{ security_score|default:0 }}</div>
+            <div style="color:var(--muted)">Recommendation: <strong>{{ recommendation }}</strong></div>
+          </div>
+          <div class="kpi">
+            <h4>Token</h4>
+            <div class="val">{{ token_name }} ({{ token_symbol }})</div>
+            <div style="color:var(--muted)">Verified: {{ verified }}</div>
+          </div>
+          <div class="kpi">
+            <h4>Supply</h4>
+            <div class="val">{{ total_supply }}</div>
+            <div style="color:var(--muted)">Decimals: {{ decimals|default:'-' }} • Holders: {{ holders_count|default:'-' }}</div>
+          </div>
+          <div class="kpi">
+            <h4>Creator</h4>
+            <div class="val" style="word-break:break-all">{{ creator|default:'Unknown' }}</div>
+            <div style="color:var(--muted)">Creation: {{ creation_time }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detected Risks -->
+    <div class="card">
+      <div class="card-head"><h3>Detected Risks</h3></div>
+      <div class="card-body">
+        {% if risks and risks|length > 0 %}
+          {% for r in risks %}
+            {% with s=r.severity|lower %}
+            <div class="risk {{ s }}">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <strong style="font-size:15px">{{ r.title }}</strong>
+                <span class="badge {{ s }}">{{ r.severity }}</span>
+              </div>
+              <div style="color:var(--muted);margin-top:4px">{{ r.detail }}</div>
+              {% if r.references %}
+              <div style="margin-top:8px">
+                <details>
+                  <summary>References</summary>
+                  <div style="color:var(--muted);margin-top:8px">{{ r.references }}</div>
+                </details>
+              </div>
+              {% endif %}
+            </div>
+            {% endwith %}
+          {% endfor %}
+        {% else %}
+          <div style="color:var(--muted)">No specific risks detected by heuristics.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Function & Code Insights -->
+    <div class="card">
+      <div class="card-head"><h3>Function & Code Insights</h3></div>
+      <div class="card-body">
+        <div class="grid cols-4">
+          <div class="kpi"><h4>Total Functions</h4><div class="val">{{ total_functions|default:'-' }}</div></div>
+          <div class="kpi"><h4>Storage Vars</h4><div class="val">{{ storage_vars|default:'-' }}</div></div>
+          <div class="kpi"><h4>Mapping Vars</h4><div class="val">{{ mapping_vars|default:'-' }}</div></div>
+          <div class="kpi"><h4>Smell Score</h4><div class="val">{{ smell_score|default:'-' }}</div></div>
+        </div>
+
+        <div style="margin-top:14px">
+          <details open>
+            <summary>Top Functions</summary>
+            <div style="margin-top:10px;color:var(--muted);font-size:14px">
+              {% if top_functions %}
+                {% for f in top_functions %}{{ f.0 }} ({{ f.1 }}){% if not forloop.last %}, {% endif %}{% endfor %}
+              {% else %}-{% endif %}
+            </div>
+          </details>
+        </div>
+
+        {% if vuln_summary %}
+        <div class="grid cols-5" style="margin-top:16px;display:grid;gap:12px;grid-template-columns:repeat(5,minmax(0,1fr))">
+          <div class="kpi"><h4>Critical</h4><div class="val">{{ vuln_summary.CRITICAL|default:0 }}</div></div>
+          <div class="kpi"><h4>High</h4><div class="val">{{ vuln_summary.HIGH|default:0 }}</div></div>
+          <div class="kpi"><h4>Medium</h4><div class="val">{{ vuln_summary.MEDIUM|default:0 }}</div></div>
+          <div class="kpi"><h4>Low</h4><div class="val">{{ vuln_summary.LOW|default:0 }}</div></div>
+          <div class="kpi"><h4>Info</h4><div class="val">{{ vuln_summary.INFO|default:0 }}</div></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Build & Proxy -->
+    <div class="card">
+      <div class="card-head"><h3>Build & Proxy</h3></div>
+      <div class="card-body">
+        <div class="grid cols-4">
+          <div class="kpi"><h4>Compiler</h4><div class="val">{{ compiler_version|default:'-' }}</div></div>
+          <div class="kpi"><h4>License</h4><div class="val">{{ license_type|default:'-' }}</div></div>
+          <div class="kpi"><h4>Optimization</h4><div class="val">{{ optimization_used|default:'-' }} (runs {{ optimization_runs|default:'-' }})</div></div>
+          <div class="kpi"><h4>Proxy</h4><div class="val">{{ proxy_flag|default:'-' }}</div></div>
+        </div>
+        <div class="kpi" style="margin-top:12px">
+          <h4>Implementation</h4>
+          <div class="val" style="word-break:break-all">{{ implementation_addr|default:'-' }}</div>
+        </div>
+
+        <!-- ✅ ABI & Privilege Analysis (restored + robust) -->
+        <div style="margin-top:16px">
+          <h3 style="margin:0 0 10px">ABI & Privilege Analysis</h3>
+
+          {# Show detailed rows if available: abi_risky_details = [{name, role, severity, description}] #}
+          {% if abi_risky_details and abi_risky_details|length > 0 %}
+            <div style="overflow:auto">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Function</th>
+                    <th>Role / Capability</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for it in abi_risky_details %}
+                  {% with s=it.severity|lower %}
+                  <tr>
+                    <td style="white-space:nowrap">{{ it.name }}</td>
+                    <td>{{ it.role }}</td>
+                    <td>
+                      <span class="badge {% if s == 'high' %}high{% elif s == 'medium' %}medium{% else %}low{% endif %}">
+                        {{ it.severity }}
+                      </span>
+                    </td>
+                    <td style="min-width:280px">{{ it.description }}</td>
+                  </tr>
+                  {% endwith %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {# Fallback: older variable abi_risky_hits (list of strings) #}
+          {% elif abi_risky_hits and abi_risky_hits|length > 0 %}
+            <div class="risk high">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <strong>Privileged functions in ABI</strong>
+                <span class="badge high">HIGH</span>
+              </div>
+              <div style="color:var(--muted);margin-top:6px">{{ abi_risky_hits|join:', ' }}</div>
+            </div>
+
+          {# Optional: another common shape abi_privileged (list of dicts) #}
+          {% elif abi_privileged and abi_privileged|length > 0 %}
+            <div style="overflow:auto">
+              <table class="table">
+                <thead><tr><th>Function</th><th>Reason</th><th>Severity</th></tr></thead>
+                <tbody>
+                  {% for it in abi_privileged %}
+                  {% with s=it.severity|lower %}
+                  <tr>
+                    <td style="white-space:nowrap">{{ it.function|default:it.name }}</td>
+                    <td>{{ it.reason|default:it.detail }}</td>
+                    <td>
+                      <span class="badge {% if s == 'high' %}high{% elif s == 'medium' %}medium{% else %}low{% endif %}">
+                        {{ it.severity|default:"HIGH" }}
+                      </span>
+                    </td>
+                  </tr>
+                  {% endwith %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% else %}
+            <div style="color:var(--muted)">No privileged or sensitive ABI functions detected.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Holders -->
+    <div class="card">
+      <div class="card-head"><h3>Top Holders</h3></div>
+      <div class="card-body">
+        {% if holders_display and holders_display|length > 0 %}
+          <div class="grid cols-3">
+            {% for h in holders_display %}
+            <div class="kpi">
+              <h4>Address</h4>
+              <div class="val" style="font-size:14px;word-break:break-all">{{ h.address }}</div>
+              <div style="color:var(--muted);margin-top:6px">Balance: {{ h.balance_h }} ({{ h.percent }})</div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="color:var(--muted)">No holder data available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Project Links -->
+    {% if project_links %}
+    <div class="card">
+      <div class="card-head"><h3>Project Links</h3></div>
+      <div class="card-body">
+        <div class="grid cols-3">
+          {% for k, v in project_links.items %}
+          <div class="kpi">
+            <h4 style="text-transform:none;letter-spacing:0">{{ k|title }}</h4>
+            <div class="val" style="font-size:14px;word-break:break-all">
+              <a href="{{ v }}" target="_blank" rel="noopener" style="color:#cde1ff;text-decoration:underline">{{ v }}</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <a href="{% url 'export_token_report_pdf' address %}" class="btn">Export PDF</a>
+        <a href="/token/" class="btn secondary">Analyze Another Token</a>
+        <a href="/simulator" class="btn">Simulator Playground</a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+</body>
+</html>

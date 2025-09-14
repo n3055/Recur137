@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web3 Architecture Simulator</title>
+    <link rel="stylesheet" href="https://unpkg.com/drawflow/dist/drawflow.min.css">
+    <style>
+        body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; background: #0b1220; color: #e6edf3; }
+        .container { display: grid; grid-template-columns: 280px 1fr 360px; grid-template-rows: 64px 1fr; height: 100vh; }
+        header { grid-column: 1 / 4; display:flex; align-items:center; padding: 0 16px; border-bottom: 1px solid #1e2a44; background: #0f172a; }
+        header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+        .left { border-right:1px solid #1e2a44; padding: 12px; overflow:auto; }
+        .canvas-wrap { position:relative; }
+        #drawflow { width: 100%; height: calc(100vh - 64px); background: #0b1220; }
+        .right { border-left:1px solid #1e2a44; padding: 12px; overflow:auto; }
+        .palette h3, .right h3 { margin: 12px 0 8px 0; font-size: 13px; letter-spacing: 0.3px; color: #9fb3c8; }
+        .component { display:flex; align-items:center; gap: 8px; padding: 8px; margin-bottom: 6px; background:#0f1a2f; border:1px solid #1e2a44; border-radius: 8px; cursor: grab; }
+        .component:hover { background:#11203a; }
+        .component .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .btn-row { display:flex; gap:8px; margin-top: 8px; }
+        button { background:#1b2b4b; color:#e6edf3; border:1px solid #2b3d63; border-radius:8px; padding:8px 10px; cursor:pointer; }
+        button:hover { background:#21365c; }
+        .score { font-size: 28px; font-weight: 700; }
+        .issue { background:#1a2338; border:1px solid #2b3d63; border-radius:8px; padding:8px; margin-bottom:8px; }
+        .issue .sev { font-weight:700; }
+        .node-risk { outline: 2px solid #d97706 !important; }
+        .node-danger { outline: 2px solid #ef4444 !important; }
+        strong{
+          color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Web3 Architecture Simulator & Vulnerability Scanner</h1>
+    </header>
+    <aside class="left">
+        <div class="palette">
+            <h3>Components</h3>
+            <div id="components"></div>
+            <div class="btn-row">
+                <button id="btn-new">New</button>
+                <button id="btn-save">Save</button>
+                <button id="btn-analyze">Analyze</button>
+            </div>
+            <div class="btn-row">
+                <button id="btn-export-json">Export JSON</button>
+                <button id="btn-export-pdf">Export PDF</button>
+            </div>
+            <h3>Recent Diagrams</h3>
+            <div id="recent"></div>
+        </div>
+    </aside>
+    <main class="canvas-wrap">
+        <div id="drawflow"></div>
+    </main>
+    <aside class="right">
+        <div>
+            <h3>Security Score</h3>
+            <div class="score" id="security-score">100</div>
+        </div>
+        <div style="margin-top:12px;">
+            <h3>Detected Issues</h3>
+            <div id="issues"></div>
+        </div>
+        <div style="margin-top:12px;">
+            <h3>Fix Suggestions</h3>
+            <ul id="suggestions"></ul>
+        </div>
+    </aside>
+</div>
+
+<script src="https://unpkg.com/drawflow/dist/drawflow.min.js"></script>
+<script>
+const COMPONENTS = [
+  { type: 'Wallet', color:'#60a5fa' },
+  { type: 'Smart Contract', color:'#34d399' },
+  { type: 'Bridge', color:'#fbbf24' },
+  { type: 'DEX', color:'#f472b6' },
+  { type: 'RPC Node', color:'#a78bfa' },
+  { type: 'Oracle', color:'#f59e0b' },
+  { type: 'Custodial Service', color:'#f87171' },
+  { type: 'API Endpoint', color:'#22d3ee' },
+  { type: 'Token', color:'#4ade80' },
+  { type: 'NFT', color:'#93c5fd' },
+  { type: 'DAO', color:'#fb7185' },
+  { type: 'External Wallet', color:'#fecaca' }
+];
+
+let editor;
+let currentDiagramId = null;
+const edgeLabels = {};
+
+function nodeTemplate(title, type, color) {
+  const tpl = document.createElement('div');
+  tpl.innerHTML = `
+    <div style="min-width:200px;padding:10px;background:#0f1a2f;border:1px solid #1e2a44;border-radius:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <strong>${title}</strong>
+        <span style="font-size:11px;color:#9fb3c8;">${type}</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <input placeholder="Address (optional)" data-key="address" style="flex:1;background:#0b1220;border:1px solid #1e2a44;border-radius:6px;color:#e6edf3;padding:6px;" />
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#9fb3c8;">
+          <input type="checkbox" data-key="verified" /> verified
+        </label>
+      </div>
+    </div>
+  `;
+  return tpl;
+}
+
+function buildPalette() {
+  const wrap = document.getElementById('components');
+  COMPONENTS.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'component';
+    el.draggable = true;
+    el.dataset.type = c.type;
+    el.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.type}`;
+    el.addEventListener('dragstart', (ev) => {
+      ev.dataTransfer.setData('component', JSON.stringify(c));
+    });
+    wrap.appendChild(el);
+  });
+}
+
+function initEditor() {
+  const id = document.getElementById('drawflow');
+  editor = new Drawflow(id);
+  editor.reroute = true;
+  editor.start();
+
+  id.addEventListener('dragover', (ev) => ev.preventDefault());
+  id.addEventListener('drop', (ev) => {
+    ev.preventDefault();
+    const comp = JSON.parse(ev.dataTransfer.getData('component'));
+    const pos = editor.precanvas.getBoundingClientRect();
+    const x = ev.clientX - pos.left;
+    const y = ev.clientY - pos.top;
+    const tpl = nodeTemplate(comp.type, comp.type, comp.color);
+    const data = { type: comp.type, label: comp.type, address: '', verified: false };
+    editor.addNode(comp.type, 1, 1, x, y, comp.type, data, tpl.outerHTML);
+  });
+
+  // Edge label editing on creation
+  editor.on('connectionCreated', function(e) {
+    const key = `${e.output_id}->${e.input_id}`;
+    const action = prompt('Label this connection (e.g., swap, approve, transfer):', edgeLabels[key] || 'transfer');
+    if (action) edgeLabels[key] = action;
+  });
+}
+
+function serialize() {
+  const raw = editor.export();
+  // Map Drawflow JSON to normalized schema { nodes: [], edges: [] }
+  const nodes = [];
+  const edges = [];
+  const dfNodes = raw.drawflow?.Home?.data || {};
+  Object.keys(dfNodes).forEach(k => {
+    const n = dfNodes[k];
+    const el = document.querySelector(`#node-${k}`);
+    // read address + verified from inputs
+    const address = el?.querySelector('input[data-key="address"]')?.value || '';
+    const verified = !!el?.querySelector('input[data-key="verified"]')?.checked;
+    nodes.push({ id: k, label: n.name, type: n.data?.type || n.name, address, verified, position: { x: n.pos_x, y: n.pos_y } });
+    // outputs
+    const outs = n.outputs || {};
+    Object.values(outs).forEach(o => {
+      (o.connections || []).forEach(conn => {
+        const key = `${k}->${conn.node}`;
+        const action = edgeLabels[key] || 'transfer';
+        edges.push({ source: k, target: String(conn.node), label: action });
+      });
+    });
+  });
+  return { nodes, edges };
+}
+
+function promptLabel(defaultLabel) {
+  return defaultLabel || 'transfer';
+}
+
+async function analyze(diagram) {
+  const res = await fetch('/api/diagram/analyze/', { method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: diagram }) });
+  const data = await res.json();
+  return data;
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.drawflow-node').forEach(n => { n.classList.remove('node-risk'); n.classList.remove('node-danger'); });
+}
+
+function applyHighlights(analysis) {
+  clearHighlights();
+  (analysis.issues || []).forEach(issue => {
+    const cls = issue.severity === 'HIGH' || issue.severity === 'CRITICAL' ? 'node-danger' : 'node-risk';
+    (issue.nodes || []).forEach(nid => {
+      const el = document.getElementById(`node-${nid}`);
+      if (el) el.classList.add(cls);
+    });
+  });
+}
+
+function renderIssues(analysis) {
+  const box = document.getElementById('issues');
+  box.innerHTML = '';
+  (analysis.issues || []).forEach(i => {
+    const div = document.createElement('div');
+    div.className = 'issue';
+    div.innerHTML = `<div class="sev">${i.severity}</div><div style="margin-top:4px;">${i.title}</div><div style="color:#9fb3c8;margin-top:4px;">${i.detail || ''}</div>`;
+    box.appendChild(div);
+  });
+  document.getElementById('security-score').textContent = analysis.security_score ?? 100;
+  renderSuggestions(analysis);
+}
+
+function renderSuggestions(analysis) {
+  const s = document.getElementById('suggestions');
+  s.innerHTML = '';
+  const recs = [];
+  (analysis.issues || []).forEach(i => {
+    if (i.rule_id === 'RULE_PHISHING_FLOW') recs.push('Verify contract code and avoid forwarding funds from wallet to unverified contracts.');
+    if (i.rule_id === 'RULE_APPROVAL_LOOP') recs.push('Limit approval scopes; use permit-style approvals with expiry.');
+    if (i.rule_id === 'RULE_UNCHECKED_BRIDGE') recs.push('Use audited, verified bridges; add allowlists and rate limits.');
+    if (i.rule_id === 'RULE_SPOF') recs.push('Reduce centralization by adding redundancy and alternative routes.');
+    if (i.rule_id === 'RULE_CYCLE_FUNDS') recs.push('Break cyclical fund flows; add circuit breakers and monitoring.');
+    if (i.rule_id === 'INTEL') recs.push('Address flagged by intel: quarantine and review transactions.');
+  });
+  Array.from(new Set(recs)).forEach(t => { const li = document.createElement('li'); li.textContent = t; s.appendChild(li); });
+}
+
+async function saveDiagram() {
+  const data = serialize();
+  const payload = { id: currentDiagramId, title: prompt('Title', 'Untitled Diagram') || 'Untitled Diagram', description: '', data };
+  const res = await fetch('/api/diagram/save/', { method:'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const out = await res.json();
+  if (out.id) currentDiagramId = out.id;
+  if (out.analysis) { applyHighlights(out.analysis); renderIssues(out.analysis); }
+  loadRecent();
+}
+
+async function loadRecent() {
+  const res = await fetch('/api/diagrams/');
+  const data = await res.json();
+  const box = document.getElementById('recent');
+  box.innerHTML = '';
+  (data.diagrams || []).forEach(d => {
+    const btn = document.createElement('button');
+    btn.textContent = `${d.title} (${d.security_score})`;
+    btn.onclick = async () => {
+      const r = await fetch(`/api/diagram/${d.id}/`);
+      const full = await r.json();
+      loadDiagram(full.data);
+      currentDiagramId = d.id;
+      document.getElementById('security-score').textContent = full.security_score;
+    };
+    box.appendChild(btn);
+  });
+}
+
+function loadDiagram(diagram) {
+  editor.clear();
+  const map = {};
+  (diagram.nodes || []).forEach(n => {
+    const tpl = nodeTemplate(n.label || n.type, n.type, '#1f2937');
+    editor.addNode(n.type, 1, 1, n.position?.x || 100, n.position?.y || 100, n.type, { type: n.type, label: n.label, address: n.address || '', verified: !!n.verified }, tpl.outerHTML);
+    map[n.id] = editor.nodeId - 1;
+  });
+  (diagram.edges || []).forEach(e => {
+    const s = map[e.source];
+    const t = map[e.target];
+    if (s && t) editor.addConnection(s, 1, t, 1);
+    edgeLabels[`${s}->${t}`] = e.label || 'transfer';
+  });
+}
+
+async function exportJSON() {
+  if (!currentDiagramId) { alert('Save diagram first.'); return; }
+  window.location.href = `/export/diagram/${currentDiagramId}/`;
+}
+
+async function exportPDF() {
+  window.print();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildPalette();
+  initEditor();
+  loadRecent();
+  document.getElementById('btn-new').onclick = () => { currentDiagramId = null; editor.clear(); document.getElementById('issues').innerHTML=''; document.getElementById('security-score').textContent='100'; };
+  document.getElementById('btn-save').onclick = saveDiagram;
+  document.getElementById('btn-analyze').onclick = async () => { const data = serialize(); const out = await analyze(data); applyHighlights(out); renderIssues(out); };
+  document.getElementById('btn-export-json').onclick = exportJSON;
+  document.getElementById('btn-export-pdf').onclick = exportPDF;
+});
+</script>
+</body>
+</html>
+

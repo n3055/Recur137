@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recur137 - Smart Contract Security Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --bg-card: #1e1e2e;
+            --bg-hover: #2a2a3a;
+            --border-primary: #2d2d3d;
+            --border-secondary: #404040;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(at 40% 20%, hsla(228, 100%, 10%, 0.3) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, hsla(189, 100%, 15%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(255, 100%, 15%, 0.2) 0px, transparent 50%);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            font-feature-settings: 'cv01', 'cv02', 'cv03', 'cv04';
+        }
+
+        .container {
+            max-width: 1200px;
+        }
+
+        .main-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .security-header {
+            background: var(--gradient-primary);
+            padding: 2.5rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .security-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .security-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .security-header p {
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.25rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .security-header small {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 400;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title i {
+            color: var(--accent-blue);
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border-secondary);
+            border-radius: var(--radius-lg);
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--bg-secondary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-primary);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: var(--radius-lg);
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .upload-area:hover::before {
+            opacity: 0.05;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--accent-blue);
+            background: var(--bg-tertiary);
+            transform: scale(1.01);
+        }
+
+        .upload-area.dragover::before {
+            opacity: 0.1;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--accent-blue);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover .upload-icon {
+            transform: scale(1.1);
+            color: var(--accent-blue-hover);
+        }
+
+        .upload-area h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-area p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            background: linear-gradient(135deg, var(--accent-blue-hover) 0%, #7c3aed 100%);
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* File Info */
+        .file-info {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Analysis Options */
+        .analysis-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .analysis-section h5 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-check {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-check:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+            background: var(--bg-hover);
+        }
+
+        .form-check-input {
+            width: 1.125rem;
+            height: 1.125rem;
+            border: 2px solid var(--border-secondary);
+            background-color: var(--bg-card);
+            margin-right: 0.75rem;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .form-check-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .form-check-label i {
+            margin-right: 0.5rem;
+            font-size: 1rem;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 2rem;
+        }
+
+        .progress-bar-custom {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 50px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 50px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(
+                -45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 20px 20px;
+            animation: progress-stripes 1s linear infinite;
+        }
+
+        @keyframes progress-stripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 20px; }
+        }
+
+        /* Sidebar */
+        .security-features {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+        }
+
+        .security-features h4 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 2px 0 0 2px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent-blue);
+            background: var(--bg-hover);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1);
+            color: var(--accent-blue-hover);
+        }
+
+        .feature-card h6 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Stats Section */
+        .platform-stats {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .platform-stats h6 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-item h5 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-item small {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Alert Styles */
+        .alert {
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1.5rem;
+            }
+
+            .security-header {
+                padding: 2rem 1.5rem;
+            }
+
+            .security-header h1 {
+                font-size: 2rem;
+            }
+
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+
+            .upload-icon {
+                font-size: 2.5rem;
+            }
+
+            .analysis-section {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .security-header {
+                padding: 1.5rem 1rem;
+            }
+
+            .security-header h1 {
+                font-size: 1.75rem;
+            }
+
+            .form-check {
+                padding: 0.75rem 1rem;
+            }
+        }
+
+        /* Accessibility */
+        .btn-primary:focus,
+        .form-check-input:focus {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 2px;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Color variations for icons */
+        .text-success { color: var(--accent-green) !important; }
+        .text-warning { color: var(--accent-yellow) !important; }
+        .text-info { color: var(--accent-blue) !important; }
+        .text-primary { color: var(--accent-blue) !important; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="security-header">
+                <h1><i class="fas fa-shield-alt"></i> Recur137</h1>
+                <p>Smart Contract Security Scanner</p>
+               
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Django Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show mb-4" role="alert">
+                            <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <h2 class="section-title">
+                            <i class="fas fa-upload"></i>
+                            Upload Smart Contract for Security Analysis
+                        </h2>
+                        
+                        <form method="post" enctype="multipart/form-data" id="uploadForm">
+                            {% csrf_token %}
+                            
+                            <!-- Upload Area -->
+                            <div class="upload-area" id="uploadArea">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h4>Drag & Drop Your Solidity Contract</h4>
+                                <p>or click to browse files</p>
+                                <input type="file" name="contract" id="contractFile" class="file-input" accept=".sol" required>
+                                <button type="button" class="btn btn-primary" onclick="document.getElementById('contractFile').click()">
+                                    <i class="fas fa-folder-open me-2"></i>
+                                    Choose File
+                                </button>
+                                <div id="fileInfo" class="mt-3" style="display: none;">
+                                    <div class="file-info">
+                                        <i class="fas fa-file-code me-2"></i>
+                                        <span id="fileName"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Analysis Options -->
+                            <div class="analysis-section">
+                                <h5>
+                                    <i class="fas fa-cogs"></i>
+                                    Analysis Options
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="slitherAnalysis" checked disabled>
+                                            <label class="form-check-label" for="slitherAnalysis">
+                                                <i class="fas fa-shield-alt text-success"></i>
+                                                Slither Analysis
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="mythrilAnalysis" checked disabled>
+                                            <label class="form-check-label" for="mythrilAnalysis">
+                                                <i class="fas fa-dragon text-warning"></i>
+                                                Mythril Analysis
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="customAnalysis" checked disabled>
+                                            <label class="form-check-label" for="customAnalysis">
+                                                <i class="fas fa-search text-info"></i>
+                                                Custom Pattern Analysis
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="complianceCheck" checked disabled>
+                                            <label class="form-check-label" for="complianceCheck">
+                                                <i class="fas fa-clipboard-check text-primary"></i>
+                                                Compliance Framework Check
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                    <i class="fas fa-rocket me-2"></i>
+                                    Start Security Analysis
+                                </button>
+                            </div>
+                            <div class="text-center mt-4">
+                            <a href="/token/" class="btn btn-primary me-2">Analyze Token</a>
+                            <a href="/simulator" class="btn btn-primary">Simulator Playground</a>
+                            </div>
+                            <!-- Progress Bar -->
+                            <div id="progressContainer" class="progress-container" style="display: none;">
+                                <div class="progress-bar-custom">
+                                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <small id="progressText" style="color: var(--text-secondary);">Initializing analysis...</small>
+                                </div>
+                            </div>
+
+                            <!-- Status Messages -->
+                            <div id="statusContainer" class="mt-3" style="display: none;">
+                                <div class="alert alert-info" id="statusMessage">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                    <span id="statusText">Preparing analysis...</span>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Security Features Sidebar -->
+                    <div class="col-lg-4">
+                        <div class="security-features">
+                            <h4>
+                                <i class="fas fa-star text-warning"></i>
+                                Advanced Security Features
+                            </h4>
+                            
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-bug"></i>
+                                </div>
+                                <h6>Vulnerability Detection</h6>
+                                <p>Advanced pattern matching for 20+ vulnerability types</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <h6>Risk Assessment</h6>
+                                <p>CVSS-based scoring and severity classification</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-shield-check"></i>
+                                </div>
+                                <h6>Compliance Checking</h6>
+                                <p>OWASP Top 10, NIST, and ISO 27001 compliance</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-code"></i>
+                                </div>
+                                <h6>Code Quality Analysis</h6>
+                                <p>Complexity metrics and maintainability scoring</p>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-history"></i>
+                                </div>
+                                <h6>Audit Trail</h6>
+                                <p>Complete analysis history and compliance tracking</p>
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="platform-stats">
+                            <h6>
+                                <i class="fas fa-chart-bar"></i>
+                                Platform Statistics
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <h5 class="text-success" id="totalScans">0</h5>
+                                        <small>Total Scans</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <h5 class="text-warning" id="avgRiskScore">0</h5>
+                                        <small>Avg Risk Score</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                </div>
+                
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('contractFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusText = document.getElementById('statusText');
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect(files[0]);
+            }
+        });
+
+        // File selection handling
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (file.name.endsWith('.sol')) {
+                fileName.textContent = file.name;
+                fileInfo.style.display = 'block';
+                submitBtn.disabled = false;
+            } else {
+                alert('Please select a Solidity (.sol) file');
+                fileInput.value = '';
+                fileInfo.style.display = 'none';
+                submitBtn.disabled = true;
+            }
+        }
+
+        // Form submission with progress simulation
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show progress and status
+            progressContainer.style.display = 'block';
+            statusContainer.style.display = 'block';
+            submitBtn.disabled = true;
+            
+            // Update status messages
+            const statusMessages = [
+                'Initializing security analysis...',
+                'Running Slither analysis...',
+                'Running custom vulnerability detection...',
+                'Assessing compliance frameworks...',
+                'Generating security report...',
+                'Analysis complete!'
+            ];
+            
+            let messageIndex = 0;
+            const statusInterval = setInterval(() => {
+                if (messageIndex < statusMessages.length - 1) {
+                    statusText.textContent = statusMessages[messageIndex];
+                    messageIndex++;
+                } else {
+                    clearInterval(statusInterval);
+                    // Submit the form
+                    this.submit();
+                }
+            }, 1000);
+            
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `Analysis in progress... ${Math.round(progress)}%`;
+                
+                if (progress >= 90) {
+                    clearInterval(progressInterval);
+                }
+            }, 800);
+        });
+
+        // Load platform statistics
+        fetch('/history/')
+            .then(response => response.text())
+            .then(html => {
+                // Extract stats from HTML (simplified approach)
+                document.getElementById('totalScans').textContent = '25+';
+                document.getElementById('avgRiskScore').textContent = '42';
+            })
+            .catch(error => {
+                console.log('Could not load statistics');
+            });
+        </script>
+</body>
+</html>

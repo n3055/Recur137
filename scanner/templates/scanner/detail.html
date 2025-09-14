@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Details - {{ scan_session.contract_name }} - Recur137</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .detail-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .detail-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        .vulnerability-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+        .vulnerability-item.critical { border-left-color: #dc3545; }
+        .vulnerability-item.high { border-left-color: #fd7e14; }
+        .vulnerability-item.medium { border-left-color: #ffc107; }
+        .vulnerability-item.low { border-left-color: #28a745; }
+        
+        .severity-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .severity-critical { background: #dc3545; color: white; }
+        .severity-high { background: #fd7e14; color: white; }
+        .severity-medium { background: #ffc107; color: black; }
+        .severity-low { background: #28a745; color: white; }
+        
+        .compliance-item {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        .compliance-pass { background: #d4edda; border: 1px solid #c3e6cb; }
+        .compliance-fail { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .compliance-partial { background: #fff3cd; border: 1px solid #ffeaa7; }
+        
+        .audit-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #667eea;
+        }
+        
+        .code-snippet {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        
+        .metric-highlight {
+            text-align: center;
+            padding: 1rem;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            border-radius: 10px 10px 0 0;
+            margin-right: 5px;
+            color: #6c757d;
+        }
+        .nav-tabs .nav-link.active {
+            background: #667eea;
+            color: white;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Detail Header -->
+        <div class="detail-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-file-alt"></i> {{ scan_session.contract_name }}</h1>
+                    <p class="mb-0">Session ID: {{ scan_session.session_id }}</p>
+                    <small>Scanned on {{ scan_session.scan_timestamp|date:"F j, Y, g:i a" }}</small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <div class="me-3">
+                            <span class="severity-badge severity-{{ scan_session.severity_level|lower }}">
+                                {{ scan_session.severity_level }}
+                            </span>
+                        </div>
+                        <div>
+                            <h2 class="mb-0">{{ scan_session.risk_score|floatformat:1 }}/100</h2>
+                            <small>Risk Score</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="detail-card">
+                    <div class="metric-highlight">
+                        <i class="fas fa-bug fa-2x text-danger mb-3"></i>
+                        <div class="metric-value text-danger">{{ vulnerabilities|length }}</div>
+                        <small class="text-muted">Total Vulnerabilities</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="detail-card">
+                    <div class="metric-highlight">
+                        <i class="fas fa-clock fa-2x text-info mb-3"></i>
+                        <div class="metric-value text-info">{{ scan_session.scan_duration|floatformat:2 }}s</div>
+                        <small class="text-muted">Scan Duration</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="detail-card">
+                    <div class="metric-highlight">
+                        <i class="fas fa-shield-alt fa-2x text-success mb-3"></i>
+                        <div class="metric-value text-success">
+                            {% if security_metrics %}
+                                {{ security_metrics.security_score|floatformat:1 }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">Security Score</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="detail-card">
+                    <div class="metric-highlight">
+                        <i class="fas fa-clipboard-check fa-2x text-primary mb-3"></i>
+                        <div class="metric-value text-primary">
+                            {% if security_metrics %}
+                                {{ security_metrics.compliance_score|floatformat:1 }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">Compliance Score</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <div class="detail-card">
+            <ul class="nav nav-tabs" id="detailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="vulnerabilities-tab" data-bs-toggle="tab" 
+                            data-bs-target="#vulnerabilities" type="button" role="tab">
+                        <i class="fas fa-bug"></i> Vulnerabilities
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="compliance-tab" data-bs-toggle="tab" 
+                            data-bs-target="#compliance" type="button" role="tab">
+                        <i class="fas fa-clipboard-check"></i> Compliance
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="metrics-tab" data-bs-toggle="tab" 
+                            data-bs-target="#metrics" type="button" role="tab">
+                        <i class="fas fa-chart-line"></i> Security Metrics
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="audit-tab" data-bs-toggle="tab" 
+                            data-bs-target="#audit" type="button" role="tab">
+                        <i class="fas fa-history"></i> Audit Trail
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="detailTabsContent">
+                <!-- Vulnerabilities Tab -->
+                <div class="tab-pane fade show active" id="vulnerabilities" role="tabpanel">
+                    <div class="p-3">
+                        <h5 class="mb-3">
+                            <i class="fas fa-bug text-danger"></i> 
+                            Detected Vulnerabilities ({{ vulnerabilities|length }})
+                        </h5>
+                        
+                        {% if vulnerabilities %}
+                            {% for vulnerability in vulnerabilities %}
+                            <div class="vulnerability-item {{ vulnerability.severity|lower }}">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="severity-badge severity-{{ vulnerability.severity|lower }} me-3">
+                                                {{ vulnerability.severity }}
+                                            </span>
+                                            <h6 class="mb-0">{{ vulnerability.title }}</h6>
+                                        </div>
+                                        
+                                        <p class="text-muted mb-2">{{ vulnerability.description }}</p>
+                                        
+                                        {% if vulnerability.line_number %}
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-map-marker-alt"></i> Line {{ vulnerability.line_number }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if vulnerability.code_snippet %}
+                                        <div class="mb-2">
+                                            <strong>Code Snippet:</strong>
+                                            <div class="code-snippet mt-2">
+                                                <pre>{{ vulnerability.code_snippet }}</pre>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="mb-2">
+                                            <strong>Remediation:</strong> {{ vulnerability.remediation }}
+                                        </div>
+                                        
+                                        {% if vulnerability.references %}
+                                        <div>
+                                            <strong>References:</strong> 
+                                            <a href="{{ vulnerability.references }}" target="_blank" class="text-primary">
+                                                {{ vulnerability.references }}
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="text-end">
+                                            <div class="mb-2">
+                                                <small class="text-muted">CVSS Score</small><br>
+                                                <span class="badge bg-secondary">{{ vulnerability.cvss_score|floatformat:1 }}/10</span>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <small class="text-muted">Confidence</small><br>
+                                                <span class="badge bg-info">{{ vulnerability.confidence }}</span>
+                                            </div>
+                                            
+                                            <div class="mb-2">
+                                                <small class="text-muted">Detected By</small><br>
+                                                <span class="badge bg-dark">{{ vulnerability.detected_by|title }}</span>
+                                            </div>
+                                            
+                                            {% if vulnerability.cwe_id %}
+                                            <div>
+                                                <small class="text-muted">CWE ID</small><br>
+                                                <span class="badge bg-warning">{{ vulnerability.cwe_id }}</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> No vulnerabilities detected! Your contract appears to be secure.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Compliance Tab -->
+                <div class="tab-pane fade" id="compliance" role="tabpanel">
+                    <div class="p-3">
+                        <h5 class="mb-3">
+                            <i class="fas fa-clipboard-check text-primary"></i> 
+                            Compliance Framework Assessment
+                        </h5>
+                        
+                        {% if compliance_checks %}
+                            {% for check in compliance_checks %}
+                            <div class="compliance-item compliance-{{ check.status|lower }}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <strong>{{ check.framework.name }} v{{ check.framework.version }}</strong>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ check.requirement }}
+                                    </div>
+                                    <div class="col-md-2 text-end">
+                                        <span class="badge 
+                                            {% if check.status == 'PASS' %}bg-success
+                                            {% elif check.status == 'FAIL' %}bg-danger
+                                            {% elif check.status == 'PARTIAL' %}bg-warning
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ check.status }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                {% if check.details != 'Requirement met' %}
+                                <div class="row mt-2">
+                                    <div class="col-md-10 offset-md-2">
+                                        <small class="text-muted">
+                                            <strong>Details:</strong> {{ check.details }}
+                                            {% if check.evidence %}
+                                            <br><strong>Evidence:</strong> {{ check.evidence }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> No compliance framework data available.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Security Metrics Tab -->
+                <div class="tab-pane fade" id="metrics" role="tabpanel">
+                    <div class="p-3">
+                        <h5 class="mb-3">
+                            <i class="fas fa-chart-line text-success"></i> 
+                            Security Metrics & Code Quality
+                        </h5>
+                        
+                        {% if security_metrics %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Vulnerability Distribution</h6>
+                                <div class="row text-center">
+                                    <div class="col-3">
+                                        <div class="metric-value text-danger">{{ security_metrics.critical_vulnerabilities }}</div>
+                                        <small class="text-muted">Critical</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="metric-value text-warning">{{ security_metrics.high_vulnerabilities }}</div>
+                                        <small class="text-muted">High</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="metric-value text-info">{{ security_metrics.medium_vulnerabilities }}</div>
+                                        <small class="text-muted">Medium</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="metric-value text-success">{{ security_metrics.low_vulnerabilities }}</div>
+                                        <small class="text-muted">Low</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Quality Scores</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Security Score</label>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-primary" style="width: {{ security_metrics.security_score }}%">
+                                            {{ security_metrics.security_score|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Compliance Score</label>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: {{ security_metrics.compliance_score }}%">
+                                            {{ security_metrics.compliance_score|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Gas Optimization</label>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-warning" style="width: {{ security_metrics.gas_optimization_score }}%">
+                                            {{ security_metrics.gas_optimization_score|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Security metrics not available for this scan.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Audit Trail Tab -->
+                <div class="tab-pane fade" id="audit" role="tabpanel">
+                    <div class="p-3">
+                        <h5 class="mb-3">
+                            <i class="fas fa-history text-info"></i> 
+                            Audit Trail & Security Events
+                        </h5>
+                        
+                        {% if audit_trails %}
+                            {% for trail in audit_trails %}
+                            <div class="audit-item">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <strong>{{ trail.action }}</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> {{ trail.timestamp|date:"M j, Y g:i A" }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {% if trail.ip_address %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-globe"></i> {{ trail.ip_address }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        {% if trail.risk_assessment %}
+                                        <span class="badge bg-warning">Risk: {{ trail.risk_assessment }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if trail.details %}
+                                <div class="mt-2">
+                                    <small class="text-muted">{{ trail.details }}</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No audit trail data available.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row mt-4">
+            <div class="col-lg-12 text-center">
+                <a href="{% url 'upload_contract' %}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-upload"></i> Scan Another Contract
+                </a>
+                <a href="{% url 'scan_history' %}" class="btn btn-outline-secondary btn-lg me-3">
+                    <i class="fas fa-history"></i> Back to History
+                </a>
+                <button class="btn btn-success btn-lg" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print Details
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Bootstrap tabs
+        var triggerTabList = [].slice.call(document.querySelectorAll('#detailTabs button'))
+        triggerTabList.forEach(function (triggerEl) {
+            var tabTrigger = new bootstrap.Tab(triggerEl)
+        });
+
+        // Add print styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @media print {
+                body { background: white !important; }
+                .detail-header { background: #667eea !important; }
+                .btn { display: none !important; }
+                .nav-tabs { display: none !important; }
+                .tab-content > .tab-pane { display: block !important; }
+                .detail-card { break-inside: avoid; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
